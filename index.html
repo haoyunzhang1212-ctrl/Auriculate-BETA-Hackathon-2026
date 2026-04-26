@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Koji</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    :root {
+      --accent: rgba(130,255,160,0.85);
+      --accent-dim: rgba(130,255,160,0.18);
+      --panel-bg: rgba(12,12,20,0.72);
+      --panel-border: rgba(255,255,255,0.07);
+      --text-dim: rgba(255,255,255,0.35);
+      --text-mid: rgba(255,255,255,0.6);
+      --text-hi: rgba(255,255,255,0.88);
+      --font: 'DM Mono', 'SF Mono', 'Fira Mono', monospace;
+      --font-display: 'DM Serif Display', serif;
+    }
+
+    body, html {
+      margin: 0; padding: 0; height: 100%;
+      background: #07070f;
+      color: white;
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    /* ─────────────────────────────
+       THREE.JS BG
+    ───────────────────────────── */
+    #three-canvas {
+      position: fixed; inset: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+    }
+
+    /* ─────────────────────────────
+       INTRO SCREEN
+    ───────────────────────────── */
+    #intro-screen {
+      position: fixed; inset: 0; z-index: 50;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 52px;
+      background: #080810;
+      transition: opacity 0.9s ease, transform 0.9s ease;
+    }
+    #intro-screen.fade-out {
+      opacity: 0; pointer-events: none; transform: scale(1.04);
+    }
+
+    .intro-ambient {
+      position: absolute;
+      width: 700px; height: 350px;
+      background: radial-gradient(ellipse, rgba(60,200,100,0.07) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .intro-title {
+      font-family: 'DM Serif Display', serif;
+      font-style: italic;
+      font-weight: 400;
+      font-size: clamp(22px, 3.2vw, 46px);
+      letter-spacing: 0.01em;
+      text-align: center;
+      max-width: 660px;
+      line-height: 1.4;
+      color: rgba(255,255,255,0.9);
+      margin: 0; padding: 0 40px;
+      position: relative; z-index: 1;
+    }
+    .intro-title em {
+      font-style: normal;
+      color: rgba(120,255,150,0.88);
+    }
+
+    #start-btn {
+      position: relative; z-index: 1;
+      background: transparent;
+      color: rgba(255,255,255,0.8);
+      border: 1px solid rgba(255,255,255,0.25);
+      padding: 15px 60px;
+      border-radius: 2px;
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: 12px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      transition: all 0.3s;
+    }
+    #start-btn:hover {
+      color: white;
+      border-color: rgba(120,255,150,0.55);
+      box-shadow: 0 0 30px rgba(120,255,150,0.12);
+      background: rgba(120,255,150,0.04);
+    }
+
+    /* ─────────────────────────────
+       MAIN APP SHELL
+    ───────────────────────────── */
+    #app {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; flex-direction: column;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.9s ease 0.2s;
+    }
+    #app.visible { opacity: 1; pointer-events: all; }
+
+    /* ─────────────────────────────
+       CENTER ROW (cam + side panels)
+    ───────────────────────────── */
+    #center-row {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      gap: 18px;
+      min-height: 0;
+      overflow: visible;
+    }
+
+    /* ── Left side: volume bar only ── */
+    #left-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      height: 80vh;
+      width: 52px;
+      flex-shrink: 0;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      padding: 14px 0;
+      backdrop-filter: blur(20px);
+    }
+
+    /* Volume bar */
+    #vol-bar-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      width: 100%;
+      padding: 0 16px;
+    }
+    #vol-label {
+      font-family: var(--font);
+      font-size: 8px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      font-weight: 300;
+    }
+    #vol-track {
+      flex: 1;
+      width: 8px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    #vol-fill {
+      position: absolute; bottom: 0; width: 100%;
+      background: linear-gradient(to top, #FFD700, #FF8C00);
+      border-radius: 4px;
+      transition: height 0.05s linear, background 0.3s;
+    }
+    #vol-fill.locked {
+      background: linear-gradient(to top, #FF4444, #CC2222);
+    }
+    #vol-pct {
+      font-family: var(--font);
+      font-size: 8px;
+      color: var(--text-dim);
+      font-weight: 300;
+      letter-spacing: 0.05em;
+    }
+    #vol-lock-tag {
+      font-family: var(--font);
+      font-size: 7px;
+      color: #FF6464;
+      font-weight: 400;
+      letter-spacing: 0.18em;
+      margin-top: 2px;
+      display: none;
+    }
+    #vol-lock-tag.show { display: block; }
+
+    /* ── Right panel: legend + scene switcher ── */
+    #right-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      height: 80vh;
+      width: 160px;
+      min-width: 160px;
+      flex-shrink: 0;
+      margin-left: 18px;
+      overflow: visible;
+    }
+
+    /* Gesture legend card */
+    #legend-card {
+      flex: 1;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      padding: 16px 14px;
+      backdrop-filter: blur(20px);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 0;
+      overflow-y: auto;
+      min-height: 0;
+    }
+    #legend-title {
+      font-family: var(--font);
+      font-size: 8px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      font-weight: 300;
+      margin-bottom: 14px;
+    }
+    #legend {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      font-family: var(--font);
+      font-size: 11px;
+      color: var(--text-dim);
+      line-height: 2.1;
+      font-weight: 300;
+    }
+    #legend span { color: var(--text-mid); }
+
+    /* Gesture rows (emoji style) */
+    .g-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 0;
+    }
+    .g-emoji {
+      font-size: 20px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .g-info {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .g-name {
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.85);
+      letter-spacing: 0.03em;
+    }
+    .g-sub {
+      font-size: 10px;
+      color: var(--text-dim);
+      font-weight: 300;
+    }
+    #legend .leg-note {
+      margin-top: 12px;
+      font-size: 10px;
+      line-height: 1.8;
+      color: var(--text-dim);
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding-top: 12px;
+    }
+
+    /* Scene switcher card */
+    #layer-pill {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      padding: 12px 14px;
+      backdrop-filter: blur(20px);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      transition: border-color 0.4s, box-shadow 0.4s;
+    }
+    #layer-pill[data-layer="ambience"] {
+      border-color: rgba(130,255,160,0.35);
+      box-shadow: 0 0 0 1px rgba(130,255,160,0.18) inset;
+    }
+    #layer-pill[data-layer="sfx"] {
+      border-color: rgba(255,107,157,0.45);
+      box-shadow: 0 0 0 1px rgba(255,107,157,0.22) inset;
+    }
+    #layer-pill-label {
+      font-family: var(--font);
+      font-size: 8px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      font-weight: 300;
+    }
+    #layer-pill-name {
+      font-family: var(--font-display);
+      font-size: 22px;
+      letter-spacing: 0.02em;
+      font-weight: 400;
+      color: rgba(130,255,160,0.92);
+      transition: color 0.4s;
+    }
+    #layer-pill[data-layer="sfx"] #layer-pill-name {
+      color: rgba(255,107,157,0.92);
+    }
+    #layer-pill-hint {
+      font-family: var(--font);
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      font-weight: 300;
+    }
+
+    #scene-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      padding: 14px 10px;
+      backdrop-filter: blur(20px);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    #scene-title {
+      font-family: var(--font);
+      font-size: 8px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      font-weight: 300;
+      padding: 0 4px;
+      margin-bottom: 2px;
+    }
+
+    /* ── Camera (center, 80%) ── */
+    #cam-section {
+      position: relative;
+      flex: 1;
+      height: 80vh;
+      min-width: 0;
+    }
+    #cam-wrapper {
+      position: absolute; inset: 0;
+      border-radius: 14px; overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.07);
+      box-shadow: 0 0 80px rgba(0,0,0,0.7);
+      background: #000;
+    }
+    #video {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover; opacity: 0.6;
+      transform: scaleX(-1);
+    }
+    #overlay-canvas {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      transform: scaleX(-1);
+    }
+
+    /* Status (bottom center of cam) */
+    #status {
+      position: absolute; bottom: 18px; left: 50%;
+      transform: translateX(-50%);
+      font-family: var(--font);
+      font-size: 11px; letter-spacing: 0.1em; font-weight: 300;
+      color: rgba(255,255,255,0.5);
+      background: rgba(0,0,0,0.5); backdrop-filter: blur(12px);
+      padding: 6px 18px; border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.07);
+      white-space: nowrap; z-index: 5;
+    }
+
+    /* Live dot (top-right of cam) */
+    #live-dot {
+      position: absolute; top: 16px; right: 16px;
+      display: none; align-items: center; gap: 6px;
+      font-family: var(--font);
+      font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: rgba(255,255,255,0.4); z-index: 5; font-weight: 300;
+    }
+    #live-dot::before {
+      content: '●'; color: #ff4040; font-size: 8px;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+    /* Scene buttons in right panel */
+    .scene-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-dim);
+      padding: 7px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: var(--font);
+      font-weight: 300;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      transition: all 0.22s;
+      display: flex; align-items: center; gap: 7px;
+      white-space: nowrap;
+      width: 100%;
+      text-align: left;
+    }
+    .scene-btn:hover {
+      color: var(--text-hi);
+      background: rgba(255,255,255,0.05);
+    }
+    .scene-btn.active {
+      color: white;
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.15);
+    }
+    .scene-btn .scene-emoji { font-size: 13px; }
+
+    /* ─────────────────────────────
+       TUTORIAL OVERLAY
+    ───────────────────────────── */
+    #tutorial-overlay {
+      position: fixed; inset: 0; z-index: 40;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(7,7,15,0.85);
+      backdrop-filter: blur(16px);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    #tutorial-overlay.show {
+      opacity: 1; pointer-events: all;
+    }
+
+    .tutorial-box {
+      background: rgba(14,14,24,0.95);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      padding: 36px 40px;
+      max-width: 480px; width: 90%;
+      position: relative;
+    }
+    .tutorial-box h2 {
+      font-family: var(--font-display);
+      font-style: normal;
+      font-weight: 300;
+      font-size: 24px;
+      margin: 0 0 6px;
+      color: var(--text-hi);
+      letter-spacing: -0.01em;
+    }
+    .tutorial-box .tut-sub {
+      font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--text-dim); font-weight: 300; margin-bottom: 28px;
+    }
+
+    .tut-section-title {
+      font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--text-dim); font-weight: 300;
+      margin: 0 0 12px;
+    }
+
+    .tut-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .tut-item {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 10px;
+      padding: 12px 14px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .tut-emoji { font-size: 22px; flex-shrink: 0; }
+    .tut-text .tut-gesture { font-size: 12px; color: var(--text-hi); font-weight: 400; }
+    .tut-text .tut-sound { font-size: 11px; color: var(--text-dim); font-weight: 300; margin-top: 2px; }
+
+    .tut-divider { height: 1px; background: rgba(255,255,255,0.05); margin: 16px 0; }
+
+    .tut-notes {
+      font-size: 11.5px; color: var(--text-dim); font-weight: 300;
+      line-height: 1.8;
+    }
+    .tut-notes strong { color: var(--text-mid); font-weight: 400; }
+
+    #tut-close {
+      position: absolute; top: 16px; right: 16px;
+      background: transparent; border: none; cursor: pointer;
+      color: var(--text-dim); font-size: 20px;
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; transition: all 0.2s;
+    }
+    #tut-close:hover { color: white; background: rgba(255,255,255,0.06); }
+
+    /* ─────────────────────────────
+       LOADER
+    ───────────────────────────── */
+    #loader {
+      position: fixed; inset: 0;
+      display: none; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: rgba(7,7,15,0.97); z-index: 100;
+      gap: 16px; transition: opacity 0.6s;
+    }
+    #loader p {
+      font-size: 11px; color: var(--text-dim);
+      margin: 0; letter-spacing: 0.12em; font-weight: 300;
+    }
+    .spinner {
+      width: 26px; height: 26px;
+      border: 1.5px solid rgba(255,255,255,0.07);
+      border-top-color: rgba(130,255,160,0.6);
+      border-radius: 50%;
+      animation: spin 0.85s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<!-- Three.js BG -->
+<canvas id="three-canvas"></canvas>
+
+<!-- ══════════ INTRO ══════════ -->
+<div id="intro-screen">
+  <div class="intro-ambient"></div>
+  <h1 class="intro-title">In the capital lived a master of <em>vocal mimicry</em>.</h1>
+  <button id="start-btn" onclick="handleStart()">Start</button>
+</div>
+
+<!-- ══════════ MAIN APP ══════════ -->
+<div id="app">
+
+  <!-- Center row -->
+  <div id="center-row">
+
+    <!-- LEFT: volume bar only -->
+    <div id="left-panel">
+      <div id="vol-bar-wrap">
+        <div id="vol-label">VOL</div>
+        <div id="vol-track"><div id="vol-fill" style="height:70%"></div></div>
+        <div id="vol-pct">70%</div>
+        <div id="vol-lock-tag">LOCKED</div>
+      </div>
+    </div>
+
+    <!-- CAMERA (center, fills remaining space) -->
+    <div id="cam-section">
+      <div id="cam-wrapper">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="overlay-canvas"></canvas>
+        <div id="status">Show your hands</div>
+        <div id="live-dot">Live</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: gesture legend + scene switcher -->
+    <div id="right-panel">
+      <div id="legend-card">
+        <div id="legend-title">
+          <span id="legend-layer-label">Gestures · Ambience</span>
+        </div>
+        <div id="legend">
+          <!-- AMBIENCE gestures -->
+          <div id="legend-ambience">
+            <div class="g-row"><div class="g-emoji">☝️</div><div class="g-info"><div class="g-name">Wind</div><div class="g-sub">Index</div></div></div>
+            <div class="g-row"><div class="g-emoji">✌️</div><div class="g-info"><div class="g-name">Rain</div><div class="g-sub">Peace</div></div></div>
+            <div class="g-row"><div class="g-emoji">🤟</div><div class="g-info"><div class="g-name">Thunder</div><div class="g-sub">Three</div></div></div>
+            <div class="g-row"><div class="g-emoji">🤙</div><div class="g-info"><div class="g-name">Birds</div><div class="g-sub">Pinky</div></div></div>
+            <div class="g-row"><div class="g-emoji">✊</div><div class="g-info"><div class="g-name">Silence</div><div class="g-sub">Fist</div></div></div>
+          </div>
+          <!-- SFX gestures (hidden by default) -->
+          <div id="legend-sfx" style="display:none">
+            <div class="g-row"><div class="g-emoji">👌</div><div class="g-info"><div class="g-name">Dog</div><div class="g-sub">OK</div></div></div>
+            <div class="g-row"><div class="g-emoji">☝️</div><div class="g-info"><div class="g-name">Guzhen</div><div class="g-sub">Index</div></div></div>
+            <div class="g-row"><div class="g-emoji">✌️</div><div class="g-info"><div class="g-name">Footsteps</div><div class="g-sub">Peace</div></div></div>
+            <div class="g-row"><div class="g-emoji">🤟</div><div class="g-info"><div class="g-name">Door knock</div><div class="g-sub">Three</div></div></div>
+            <div class="g-row"><div class="g-emoji">✊</div><div class="g-info"><div class="g-name">Stop SFX</div><div class="g-sub">Fist</div></div></div>
+          </div>
+          <div class="leg-note">
+            <span>Left hand</span> → Volume<br>
+            Drop right hand → Lock vol 🔒<br>
+            <span>👍👍</span> both → SFX layer<br>
+            <span>👎👎</span> both → Ambience<br>
+            Press <span>M</span> to flip
+          </div>
+        </div>
+      </div>
+
+      <div id="layer-pill" data-layer="ambience">
+        <div id="layer-pill-label">LAYER</div>
+        <div id="layer-pill-name">Ambience</div>
+        <div id="layer-pill-hint">▲ Both 👍 → SFX</div>
+      </div>
+
+    </div>
+
+  </div><!-- /center-row -->
+
+</div><!-- /app -->
+
+<!-- TUTORIAL OVERLAY -->
+<div id="tutorial-overlay" onclick="handleOverlayClick(event)">
+  <div class="tutorial-box">
+    <button id="tut-close" onclick="toggleTutorial(false)">×</button>
+    <h2>How it works</h2>
+    <p class="tut-sub">Gesture-powered soundscapes</p>
+
+    <p class="tut-section-title">Right hand — Sound</p>
+    <div class="tut-grid">
+      <div class="tut-item">
+        <div class="tut-emoji">☝️</div>
+        <div class="tut-text">
+          <div class="tut-gesture">Index up</div>
+          <div class="tut-sound">Wind howling</div>
+        </div>
+      </div>
+      <div class="tut-item">
+        <div class="tut-emoji">✌️</div>
+        <div class="tut-text">
+          <div class="tut-gesture">Peace</div>
+          <div class="tut-sound">Rain falling</div>
+        </div>
+      </div>
+      <div class="tut-item">
+        <div class="tut-emoji">🤟</div>
+        <div class="tut-text">
+          <div class="tut-gesture">Three fingers</div>
+          <div class="tut-sound">Thunderstorm</div>
+        </div>
+      </div>
+      <div class="tut-item">
+        <div class="tut-emoji">🤙</div>
+        <div class="tut-text">
+          <div class="tut-gesture">Pinky out</div>
+          <div class="tut-sound">Birds singing</div>
+        </div>
+      </div>
+      <div class="tut-item">
+        <div class="tut-emoji">✊</div>
+        <div class="tut-text">
+          <div class="tut-gesture">Fist</div>
+          <div class="tut-sound">Silence</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tut-divider"></div>
+
+    <div class="tut-notes">
+      <strong>Left hand height</strong> controls volume — raise it louder, lower it softer.<br>
+      Switch scenes below to change the particle world.<br>
+      Press <strong>M</strong> to flip the mirror if hands feel reversed.
+    </div>
+  </div>
+</div>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="spinner"></div>
+  <p id="loader-msg">Loading…</p>
+</div>
+
+<!-- Three.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script type="module">
+import { HandLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
+
+// ─────────────────────────────
+//  STATE
+// ─────────────────────────────
+let scene = "forest", isMirrored = true, started = false;
+let gesture = { x:0, y:0, velocity:0 }, lastPos = { x:0, y:0 };
+
+// Ambience audio
+let windSound, rainSound, thunderSound, birdSound;
+let currentAmbience = null;
+let targetVolume = 0.7, smoothedVolume = 0.7;
+
+// SFX audio
+let dogSound, doorSound, footstepsSound, guzhenSound;
+let lastSFXPlaying = null;
+
+// Volume mapping (head height = max)
+const VOLUME_MIN_Y = 0.78;
+const VOLUME_MAX_Y = 0.34;
+
+// Volume lock (Ambience layer only)
+let isVolumeLocked = false;
+let lockedGesture = null;
+let activeSoundGesture = null;
+
+// Layer system
+let currentLayer = "ambience";
+let lastLayerSwitchTime = 0;
+
+// Debounce
+let lastSoundGesture = null;
+let soundGestureFrameCount = 0;
+let lastTriggeredSFX = null;
+const STABLE_FRAMES = 3;
+
+// ─────────────────────────────
+//  INTRO / TUTORIAL
+// ─────────────────────────────
+window.handleStart = async function() {
+  document.getElementById("intro-screen").classList.add("fade-out");
+  const loader = document.getElementById("loader");
+  loader.style.display = "flex"; loader.style.opacity = "1";
+  try { await main(); } catch(err) {
+    document.getElementById("loader-msg").textContent = "Error: " + err.message; return;
+  }
+  loader.style.opacity = "0";
+  setTimeout(() => {
+    loader.style.display = "none";
+    document.getElementById("app").classList.add("visible");
+  }, 700);
+};
+
+window.toggleTutorial = function(show) {
+  const el = document.getElementById("tutorial-overlay");
+  el.classList.toggle("show", show);
+};
+
+window.handleOverlayClick = function(e) {
+  if (e.target === document.getElementById("tutorial-overlay")) toggleTutorial(false);
+};
+
+// ─────────────────────────────
+//  AUDIO
+// ─────────────────────────────
+function setupAudio() {
+  windSound = new Audio("wind.mp3");
+  rainSound = new Audio("rain.mp3");
+  thunderSound = new Audio("thunderstorm.mp3");
+  birdSound = new Audio("bird.mp3");
+  for (const s of [windSound, rainSound, thunderSound, birdSound]) {
+    s.loop = true; s.volume = smoothedVolume;
+  }
+
+  dogSound = new Audio("dogbarks.mp3");
+  doorSound = new Audio("doorknock.mp3");
+  footstepsSound = new Audio("footsteps.mp3");
+  guzhenSound = new Audio("guzhen.mp3");
+  for (const s of [dogSound, doorSound, footstepsSound, guzhenSound]) {
+    s.loop = false; s.volume = 0.9;
+  }
+}
+
+function playAmbience(s) {
+  if (currentAmbience === s) return;
+  stopAmbience();
+  s.volume = smoothedVolume;
+  s.play().catch(()=>{});
+  currentAmbience = s;
+}
+
+function stopAmbience() {
+  if (currentAmbience) {
+    currentAmbience.pause();
+    currentAmbience.currentTime = 0;
+    currentAmbience = null;
+  }
+}
+
+function playSFX(s) {
+  s.currentTime = 0;
+  s.volume = smoothedVolume;
+  s.play().catch(()=>{});
+  lastSFXPlaying = s;
+}
+
+function stopAllSFX() {
+  for (const s of [dogSound, doorSound, footstepsSound, guzhenSound]) {
+    if (s) { s.pause(); s.currentTime = 0; }
+  }
+  lastSFXPlaying = null;
+}
+
+function tickVolume() {
+  smoothedVolume = smoothedVolume * 0.88 + targetVolume * 0.12;
+  const v = Math.max(0, Math.min(1, smoothedVolume));
+  if (currentLayer === "ambience" && currentAmbience) {
+    currentAmbience.volume = v;
+  } else if (currentLayer === "sfx" && lastSFXPlaying) {
+    lastSFXPlaying.volume = v;
+  }
+  const pct = Math.round(v * 100);
+  document.getElementById("vol-fill").style.height = pct + "%";
+  document.getElementById("vol-pct").textContent = pct + "%";
+
+  // Lock visual feedback
+  const fill = document.getElementById("vol-fill");
+  const lockTag = document.getElementById("vol-lock-tag");
+  if (isVolumeLocked) {
+    fill.classList.add("locked");
+    lockTag.classList.add("show");
+  } else {
+    fill.classList.remove("locked");
+    lockTag.classList.remove("show");
+  }
+}
+
+function computeVolumeFromWristY(wristY) {
+  const normalized = (VOLUME_MIN_Y - wristY) / (VOLUME_MIN_Y - VOLUME_MAX_Y);
+  return Math.max(0, Math.min(1, normalized));
+}
+
+// ─────────────────────────────
+//  THREE.JS  (preserved from friend's design)
+// ─────────────────────────────
+const threeCanvas = document.getElementById("three-canvas");
+const renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, antialias: true, alpha: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+const threeScene = new THREE.Scene();
+const cam3d = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 100);
+cam3d.position.set(0, 0, 5);
+window.addEventListener("resize", () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  cam3d.aspect = window.innerWidth/window.innerHeight;
+  cam3d.updateProjectionMatrix();
+});
+threeScene.add(new THREE.AmbientLight(0xffffff, 0.8));
+
+const PARTICLE_COUNT = 5000;
+const pGeo = new THREE.BufferGeometry();
+const pos = new Float32Array(PARTICLE_COUNT * 3);
+for (let i = 0; i < PARTICLE_COUNT; i++) {
+  const theta = Math.random()*Math.PI*2, phi = Math.acos(2*Math.random()-1), r = 1.1+(Math.random()-0.5)*0.3;
+  pos[i*3]=r*Math.sin(phi)*Math.cos(theta); pos[i*3+1]=r*Math.sin(phi)*Math.sin(theta); pos[i*3+2]=r*Math.cos(phi);
+}
+pGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+const pMat = new THREE.PointsMaterial({ size: 0.018, color: 0x88ff88 });
+const particles = new THREE.Points(pGeo, pMat);
+threeScene.add(particles);
+
+const handMesh = new THREE.Mesh(
+  new THREE.SphereGeometry(0.08, 16, 16),
+  new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x444444 })
+);
+threeScene.add(handMesh);
+
+const SCENE_COLORS = {
+  forest: new THREE.Color(0x44ff77),
+  rain:   new THREE.Color(0x4499ff),
+  fire:   new THREE.Color(0xff5500)
+};
+let currentColor = SCENE_COLORS.forest.clone();
+const targetColor = SCENE_COLORS.forest.clone();
+
+function threeLoop() {
+  requestAnimationFrame(threeLoop);
+  currentColor.lerp(targetColor, 0.04); pMat.color.copy(currentColor);
+  particles.rotation.y += 0.002 + gesture.velocity*0.001;
+  particles.rotation.x += 0.0005;
+  handMesh.position.x += (gesture.x*2 - handMesh.position.x)*0.12;
+  handMesh.position.y += (gesture.y*2 - handMesh.position.y)*0.12;
+  particles.position.x += (gesture.x*0.3 - particles.position.x)*0.05;
+  particles.position.y += (gesture.y*0.3 - particles.position.y)*0.05;
+  tickVolume();
+  renderer.render(threeScene, cam3d);
+}
+threeLoop();
+
+document.querySelectorAll(".scene-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    scene = btn.dataset.scene;
+    document.querySelectorAll(".scene-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    targetColor.copy(SCENE_COLORS[scene] || SCENE_COLORS.forest);
+  });
+});
+
+// ─────────────────────────────
+//  LAYER UI SYNC
+// ─────────────────────────────
+function updateLayerUI() {
+  const pill = document.getElementById("layer-pill");
+  const pillName = document.getElementById("layer-pill-name");
+  const pillHint = document.getElementById("layer-pill-hint");
+  const legendLabel = document.getElementById("legend-layer-label");
+  const legendAmb = document.getElementById("legend-ambience");
+  const legendSfx = document.getElementById("legend-sfx");
+
+  pill.dataset.layer = currentLayer;
+  if (currentLayer === "ambience") {
+    pillName.textContent = "Ambience";
+    pillHint.textContent = "▲ Both 👍 → SFX";
+    legendLabel.textContent = "Gestures · Ambience";
+    legendAmb.style.display = "";
+    legendSfx.style.display = "none";
+  } else {
+    pillName.textContent = "SFX";
+    pillHint.textContent = "▼ Both 👎 → Ambience";
+    legendLabel.textContent = "Gestures · SFX";
+    legendAmb.style.display = "none";
+    legendSfx.style.display = "";
+  }
+}
+
+// ─────────────────────────────
+//  MEDIAPIPE
+// ─────────────────────────────
+const video = document.getElementById("video");
+const ovCanvas = document.getElementById("overlay-canvas");
+const ovCtx = ovCanvas.getContext("2d");
+const statusEl = document.getElementById("status");
+let handLandmarker;
+
+function isFingerExtended(lm, tipIdx, pipIdx) {
+  const wrist = lm[0], tip = lm[tipIdx], pip = lm[pipIdx];
+  const tipDist = Math.hypot(tip.x - wrist.x, tip.y - wrist.y);
+  const pipDist = Math.hypot(pip.x - wrist.x, pip.y - wrist.y);
+  return tipDist > pipDist * 1.1;
+}
+
+function isThumbExtended(lm) {
+  const wrist = lm[0], tip = lm[4], ip = lm[3];
+  const tipDist = Math.hypot(tip.x - wrist.x, tip.y - wrist.y);
+  const ipDist = Math.hypot(ip.x - wrist.x, ip.y - wrist.y);
+  return tipDist > ipDist * 1.05;
+}
+
+function thumbDirection(lm) {
+  if (!isThumbExtended(lm)) return "neither";
+  const idx = isFingerExtended(lm, 8, 6);
+  const mid = isFingerExtended(lm, 12, 10);
+  const ring = isFingerExtended(lm, 16, 14);
+  const pinky = isFingerExtended(lm, 20, 18);
+  if (idx || mid || ring || pinky) return "neither";
+  const thumbTip = lm[4], wrist = lm[0];
+  if (thumbTip.y < wrist.y - 0.05) return "up";
+  if (thumbTip.y > wrist.y + 0.05) return "down";
+  return "neither";
+}
+
+function classifyGesture(lm) {
+  const idx = isFingerExtended(lm, 8, 6);
+  const mid = isFingerExtended(lm, 12, 10);
+  const ring = isFingerExtended(lm, 16, 14);
+  const pinky = isFingerExtended(lm, 20, 18);
+
+  // OK gesture
+  const thumbTip = lm[4], indexTip = lm[8];
+  const thumbIndexDist = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
+  if (thumbIndexDist < 0.05 && mid && ring && pinky) return "ok";
+
+  if (!idx && !mid && !ring && !pinky) return "fist";
+  if (idx && !mid && !ring && !pinky) return "index_up";
+  if (idx && mid && !ring && !pinky) return "peace";
+  if (idx && mid && ring && !pinky) return "three";
+  if (!idx && !mid && !ring && pinky) return "pinky";
+  return "other";
+}
+
+function drawHandDots(lm, color) {
+  const W = ovCanvas.width, H = ovCanvas.height;
+  for (const pt of lm) {
+    ovCtx.beginPath(); ovCtx.arc(pt.x*W, pt.y*H, 4, 0, Math.PI*2);
+    ovCtx.fillStyle = color; ovCtx.fill();
+  }
+  const c = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],
+             [0,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20],[5,9],[9,13],[13,17]];
+  ovCtx.strokeStyle = color; ovCtx.lineWidth = 1.5; ovCtx.globalAlpha = 0.5;
+  for (const [a,b] of c) {
+    ovCtx.beginPath(); ovCtx.moveTo(lm[a].x*W, lm[a].y*H); ovCtx.lineTo(lm[b].x*W, lm[b].y*H); ovCtx.stroke();
+  }
+  ovCtx.globalAlpha = 1;
+}
+
+function assignHands(allLm) {
+  let soundHand = null, volumeHand = null;
+  for (const hand of allLm) {
+    const wx = hand[0].x;
+    const onRight = isMirrored ? wx < 0.5 : wx > 0.5;
+    if (onRight) soundHand = hand;
+    else volumeHand = hand;
+  }
+  return { soundHand, volumeHand };
+}
+
+function checkLayerSwitch(soundHand, volumeHand) {
+  if (!soundHand || !volumeHand) return;
+  const now = performance.now();
+  if (now - lastLayerSwitchTime < 1500) return;
+
+  const dirA = thumbDirection(soundHand);
+  const dirB = thumbDirection(volumeHand);
+
+  if (dirA === "up" && dirB === "up" && currentLayer === "ambience") {
+    currentLayer = "sfx";
+    lastLayerSwitchTime = now;
+    lastTriggeredSFX = null;
+    updateLayerUI();
+  } else if (dirA === "down" && dirB === "down" && currentLayer === "sfx") {
+    currentLayer = "ambience";
+    lastLayerSwitchTime = now;
+    lastTriggeredSFX = null;
+    updateLayerUI();
+  }
+}
+
+function getStableGesture(currentGesture) {
+  if (currentGesture === lastSoundGesture) {
+    soundGestureFrameCount++;
+  } else {
+    lastSoundGesture = currentGesture;
+    soundGestureFrameCount = 1;
+  }
+  return soundGestureFrameCount >= STABLE_FRAMES ? currentGesture : null;
+}
+
+function getAmbienceForGesture(g) {
+  if (g === "index_up") return windSound;
+  if (g === "peace") return rainSound;
+  if (g === "three") return thunderSound;
+  if (g === "pinky") return birdSound;
+  return null;
+}
+
+function getAmbienceLabel(g) {
+  if (g === "index_up") return "Wind howling";
+  if (g === "peace") return "Rain falling";
+  if (g === "three") return "Thunderstorm";
+  if (g === "pinky") return "Birds singing";
+  return "(hold still)";
+}
+
+window.addEventListener("keydown", e => {
+  if (e.key === "m" || e.key === "M") {
+    isMirrored = !isMirrored;
+    const t = isMirrored ? "scaleX(-1)" : "scaleX(1)";
+    video.style.transform = t;
+    ovCanvas.style.transform = t;
+  }
+});
+
+function detectLoop() {
+  if (!handLandmarker) { requestAnimationFrame(detectLoop); return; }
+  ovCtx.clearRect(0, 0, ovCanvas.width, ovCanvas.height);
+  const results = handLandmarker.detectForVideo(video, performance.now());
+  const lms = results?.landmarks ?? [];
+
+  let soundHand = null, volumeHand = null;
+
+  if (lms.length > 0) {
+    if (!started) {
+      started = true;
+      const liveDot = document.getElementById("live-dot");
+      if (liveDot) liveDot.style.display = "flex";
+      setupAudio();
+    }
+    const assigned = assignHands(lms);
+    soundHand = assigned.soundHand;
+    volumeHand = assigned.volumeHand;
+  }
+
+  // Layer switch (both hands thumbs up/down)
+  checkLayerSwitch(soundHand, volumeHand);
+
+  // Volume hand
+  if (volumeHand) {
+    drawHandDots(volumeHand, "#FFD700");
+    if (!isVolumeLocked) {
+      const wristY = volumeHand[0].y;
+      targetVolume = computeVolumeFromWristY(wristY);
+    }
+  }
+
+  // Sound hand
+  if (soundHand) {
+    const handColor = currentLayer === "ambience" ? "#00FF88" : "#FF6B9D";
+    drawHandDots(soundHand, handColor);
+
+    // Update gesture for 3D effects
+    const wrist = soundHand[0];
+    const nx = wrist.x*2 - 1, ny = -(wrist.y*2 - 1);
+    const dx = nx - lastPos.x, dy = ny - lastPos.y;
+    gesture = { x: nx, y: ny, velocity: Math.sqrt(dx*dx + dy*dy) * 1000 };
+    lastPos = { x: nx, y: ny };
+
+    const rawGesture = classifyGesture(soundHand);
+    const stableGesture = getStableGesture(rawGesture);
+    let statusText = "(hold gesture steady)";
+
+    if (currentLayer === "ambience") {
+      const targetSound = getAmbienceForGesture(stableGesture);
+
+      // Showing a valid sound gesture unlocks volume
+      if (isVolumeLocked && targetSound) {
+        isVolumeLocked = false;
+        lockedGesture = null;
+      }
+
+      if (targetSound) {
+        activeSoundGesture = stableGesture;
+        statusText = getAmbienceLabel(stableGesture);
+        playAmbience(targetSound);
+      } else if (stableGesture === "fist") {
+        statusText = "Silence";
+        stopAmbience();
+        isVolumeLocked = false;
+        lockedGesture = null;
+        activeSoundGesture = null;
+      }
+
+      if (isVolumeLocked) statusText += " · Volume locked";
+    } else {
+      // SFX layer: press-to-trigger mode
+      if (isVolumeLocked) { isVolumeLocked = false; lockedGesture = null; }
+      const sfxMap = {
+        "ok":       { sound: dogSound,       label: "Dog barks" },
+        "index_up": { sound: guzhenSound,    label: "Guzhen" },
+        "peace":    { sound: footstepsSound, label: "Footsteps" },
+        "three":    { sound: doorSound,      label: "Door knock" }
+      };
+
+      if (stableGesture === "fist") {
+        statusText = "SFX silenced";
+        stopAllSFX();
+        lastTriggeredSFX = "fist";
+      } else if (sfxMap[stableGesture]) {
+        if (lastTriggeredSFX !== stableGesture) {
+          playSFX(sfxMap[stableGesture].sound);
+          lastTriggeredSFX = stableGesture;
+        }
+        statusText = sfxMap[stableGesture].label;
+      } else {
+        lastTriggeredSFX = null;
+        statusText = "(make a gesture)";
+      }
+    }
+
+    statusEl.textContent = statusText;
+  } else if (
+    currentLayer === "ambience" &&
+    activeSoundGesture &&
+    currentAmbience &&
+    !isVolumeLocked
+  ) {
+    // Right hand left frame while ambience playing → lock volume
+    isVolumeLocked = true;
+    lockedGesture = activeSoundGesture;
+    statusEl.textContent = `${getAmbienceLabel(lockedGesture)} · Volume locked`;
+    gesture = { x:0, y:0, velocity:0 };
+  } else if (lms.length === 0) {
+    statusEl.textContent = "Show your hands";
+    if (!isVolumeLocked) {
+      stopAmbience();
+      stopAllSFX();
+      activeSoundGesture = null;
+    }
+    gesture = { x:0, y:0, velocity:0 };
+  } else {
+    statusEl.textContent = isVolumeLocked
+      ? "Volume locked · show same gesture to unlock"
+      : "Right hand → sound";
+    gesture = { x:0, y:0, velocity:0 };
+  }
+
+  if (!soundHand && !isVolumeLocked) {
+    activeSoundGesture = null;
+  }
+
+  requestAnimationFrame(detectLoop);
+}
+
+async function main() {
+  document.getElementById("loader-msg").textContent = "Loading hand tracker…";
+  const vision = await FilesetResolver.forVisionTasks(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+  );
+  handLandmarker = await HandLandmarker.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
+    },
+    runningMode: "VIDEO",
+    numHands: 2
+  });
+  document.getElementById("loader-msg").textContent = "Requesting camera…";
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { width: 640, height: 480 }, audio: false
+  });
+  video.srcObject = stream;
+  await new Promise(r => { video.onloadedmetadata = r; });
+  ovCanvas.width = video.videoWidth || 640;
+  ovCanvas.height = video.videoHeight || 480;
+  // Apply mirror
+  const t = isMirrored ? "scaleX(-1)" : "scaleX(1)";
+  video.style.transform = t;
+  ovCanvas.style.transform = t;
+  updateLayerUI();
+  detectLoop();
+}
+</script>
+</body>
+</html>

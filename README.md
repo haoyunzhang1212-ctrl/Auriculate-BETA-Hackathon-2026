@@ -16,7 +16,7 @@
 
 </div>
 
----
+
 ## Table of Contents
 
 - [About the Project](#about-the-project)
@@ -26,7 +26,7 @@
   - [Steps](#steps)
 - [Usage](#usage)
 - [Configuration](#configuration)
----
+
 ## About the Project
 
 **Auriculate** is a browser-based system where you:
@@ -37,7 +37,7 @@
 
 No timeline. No post-production. Just presence.
 
----
+
 ### Built with
 
 * MediaPipe (hand tracking)
@@ -46,7 +46,7 @@ No timeline. No post-production. Just presence.
 
 Latency target: **<100ms**
 
----
+
 ##  Quick Start
 
 ```bash
@@ -55,7 +55,7 @@ npx serve
 
 Open http://localhost:3000
 
----
+
 ##  User Guide
 
 * 🟡 Left hand → **volume**
@@ -86,7 +86,7 @@ Open http://localhost:3000
 * 👍👍 → SFX
 * 👎👎 → Ambience
 
----
+
 ## Motivation
 
 AI makes content cheap — but removes the human moment.

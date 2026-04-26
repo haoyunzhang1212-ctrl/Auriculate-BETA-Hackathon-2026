@@ -20,12 +20,11 @@
 ## Table of Contents
 
 - [About the Project](#about-the-project)
+  - [Built with](#built-with)
 - [Quick Start](#quick-start)
-- [Installation](#installation)
-  - [Requirements](#requirements)
-  - [Steps](#steps)
-- [Usage](#usage)
-- [Configuration](#configuration)
+- [User Guide](#user-guide)
+- [Motivation](#motivation)
+- [Contact](#contact)
 
 ## About the Project
 
@@ -97,7 +96,7 @@ Auriculate does the opposite:
 
 Inspired by *口技 (kouji)* — an ancient Chinese art of creating entire worlds using only the human voice.
 
----
+
 ##  Contact
 
 Auriculate Team - Voskamp099@github - raelynn.z6113@gmail.com

@@ -1,53 +1,103 @@
-# Auriculate — Merged Build
 
-All logic is now inside `index.html` (one self-contained file). `main.js` is no
-longer used; `main_legacy.js` is kept here only as a reference to the previous
-standalone Phase 8 implementation.
+<a id="readme-top"></a>
 
-## How to run
+<div align="center">
+  <img src="logo.png" width="80"/>
 
-From this folder, in a terminal:
+  <h2>🎵 Auriculate</h2>
 
-```
+  <p>
+    Conduct a soundscape with your hands.
+    <br/>
+    Gesture-driven · Real-time · Performative
+  </p>
+
+<a href="https://voskamp099.github.io/Auriculate-BETA-Hackathon-2026/"><strong>Live Demo »</strong></a>
+
+</div>
+
+---
+## Table of Contents
+
+- [About the Project](#about-the-project)
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+  - [Steps](#steps)
+- [Usage](#usage)
+- [Configuration](#configuration)
+---
+## About the Project
+
+**Auriculate** is a browser-based system where you:
+
+* ✋ Use **hand gestures** to control sound
+* 🎧 Generate a **live soundscape in real time**
+* 🎭 Perform — not edit — your audio
+
+No timeline. No post-production. Just presence.
+
+---
+### Built with
+
+* MediaPipe (hand tracking)
+* Web Audio API
+* Vanilla JS
+
+Latency target: **<100ms**
+
+---
+##  Quick Start
+
+```bash
 npx serve
 ```
 
-Then open the URL it prints (usually `http://localhost:3000`) in Chrome.
+Open http://localhost:3000
 
-## What's in this build
+---
+##  User Guide
 
-- Friend's design preserved: intro screen, loader, 3D particle background,
-  tutorial overlay, scene switcher (forest / rain / fire), DM Mono / DM Serif
-  typography, glassy panel layout.
-- Phase 8 logic preserved: two-handed control, debounced gesture detection,
-  Ambience / SFX layer system, both-thumbs-up/down to switch layers,
-  press-to-trigger SFX (no rapid retrigger), volume lock when right hand
-  leaves frame in Ambience layer, head-height volume mapping.
+* 🟡 Left hand → **volume**
+* 🟢 Right hand → **sound trigger**
 
-## Layer system
+### Ambience (loop)
 
-- **Ambience layer (default):** index→wind, peace→rain, three→thunder,
-  pinky→birds, fist→silence
-- **SFX layer:** OK→dog, index→guzhen, peace→footsteps, three→door knock,
-  fist→silence
-- **Both hands 👍👍**: Ambience → SFX
-- **Both hands 👎👎**: SFX → Ambience
+| Gesture | Sound   |
+| ------- | ------- |
+| ☝️      | Wind    |
+| ✌️      | Rain    |
+| 🤟      | Thunder |
+| 🤙      | Birds   |
+| ✊       | Stop    |
 
-## Volume
+### SFX (one-shot)
 
-- Left hand height controls volume. Raise to head height for max.
-- In Ambience layer: drop the right hand while a sound is playing → volume
-  bar turns red and freezes. The sound keeps playing hands-free. Show the
-  same gesture again to unlock.
-- In SFX layer: left hand controls the most recently triggered SFX's volume.
-  No lock in this layer.
+| Gesture | Sound      |
+| ------- | ---------- |
+| 👌      | Dog bark   |
+| ☝️      | Guzheng    |
+| ✌️      | Footsteps  |
+| 🤟      | Door knock |
+| ✊       | Stop       |
 
-## Mirror
+### Switch modes
 
-Press `M` on the keyboard to flip the camera horizontally.
+* 👍👍 → SFX
+* 👎👎 → Ambience
 
-## Files
+---
+## Motivation
 
-- `index.html` — the entire app (HTML + CSS + JS, single file)
-- `main_legacy.js` — old standalone Phase 8 logic, kept as reference only
-- `*.mp3` — audio assets
+AI makes content cheap — but removes the human moment.
+
+Auriculate does the opposite:
+
+> It keeps performance live, embodied, and unrepeatable.
+
+Inspired by *口技 (kouji)* — an ancient Chinese art of creating entire worlds using only the human voice.
+
+---
+##  Contact
+
+Auriculate Team - Voskamp099@github - raelynn.z6113@gmail.com

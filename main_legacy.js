@@ -226,7 +226,7 @@ function classifyGesture(landmarks) {
   if (!index && !middle && !ring && !pinky) return "fist";
   if (index && !middle && !ring && !pinky) return "index_up";
   if (index && middle && !ring && !pinky) return "peace";
-  if (isThumbExtended(landmarks) && index && !middle && !ring && pinky) return "three";
+  if (index && !middle && !ring && pinky) return "three";
   if (!index && !middle && !ring && pinky) return "pinky";
   return "other";
 }

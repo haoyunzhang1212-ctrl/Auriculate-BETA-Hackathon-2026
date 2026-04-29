@@ -532,6 +532,382 @@
       animation: spin 0.85s linear infinite;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─────────────────────────────
+       CALIBRATION OVERLAY
+    ───────────────────────────── */
+    #calibration-overlay {
+      position: fixed; inset: 0; z-index: 300;
+      background: rgba(7,7,15,0.96);
+      display: none; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 20px;
+    }
+    #calibration-overlay.active { display: flex; }
+    .calib-instruction {
+      font-family: var(--font);
+      font-size: 16px;
+      color: var(--text-hi);
+      letter-spacing: 0.08em;
+      text-align: center;
+      max-width: 400px;
+      line-height: 1.6;
+    }
+    .calib-sub {
+      font-family: var(--font);
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      font-weight: 300;
+    }
+    .calib-dot {
+      position: fixed;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: rgba(130,255,160,0.9);
+      box-shadow: 0 0 30px rgba(130,255,160,0.5), 0 0 60px rgba(130,255,160,0.2);
+      transform: translate(-50%, -50%);
+      z-index: 301;
+      display: none;
+      transition: opacity 0.3s;
+    }
+    .calib-dot::after {
+      content: '';
+      position: absolute; inset: -8px;
+      border: 2px solid rgba(130,255,160,0.3);
+      border-radius: 50%;
+      animation: calibPulse 1s ease-in-out infinite;
+    }
+    @keyframes calibPulse {
+      0%,100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.3; }
+    }
+    .calib-progress {
+      width: 200px; height: 4px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .calib-progress-fill {
+      height: 100%;
+      background: rgba(130,255,160,0.8);
+      width: 0%;
+      transition: width 0.3s;
+    }
+    .calib-counter {
+      font-family: var(--font);
+      font-size: 13px;
+      color: var(--text-mid);
+      letter-spacing: 0.15em;
+    }
+    #calib-cam-preview {
+      position: fixed;
+      bottom: 20px; right: 20px;
+      width: 200px; height: 150px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.1);
+      z-index: 302;
+      display: none;
+    }
+    #calib-cam-preview.active { display: block; }
+    #calib-cam-preview video {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    /* ─────────────────────────────
+       MODE SELECTOR (intro screen)
+    ───────────────────────────── */
+    .mode-selector {
+      display: flex; gap: 18px;
+      position: relative; z-index: 1;
+    }
+    .mode-btn {
+      background: transparent;
+      color: rgba(255,255,255,0.8);
+      border: 1px solid rgba(255,255,255,0.25);
+      padding: 20px 32px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      transition: all 0.3s;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 10px;
+      min-width: 180px;
+    }
+    .mode-btn:hover {
+      color: white;
+      border-color: rgba(120,255,150,0.55);
+      box-shadow: 0 0 30px rgba(120,255,150,0.12);
+      background: rgba(120,255,150,0.04);
+    }
+    .mode-btn .mode-icon { font-size: 32px; }
+    .mode-btn .mode-label { font-weight: 400; }
+    .mode-btn .mode-desc {
+      font-size: 9px; color: var(--text-dim);
+      letter-spacing: 0.08em; font-weight: 300;
+      text-transform: none;
+    }
+
+    /* ─────────────────────────────
+       EYE TRACKING MODE
+    ───────────────────────────── */
+    #eye-app {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; flex-direction: column;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.9s ease 0.2s;
+    }
+    #eye-app.visible { opacity: 1; pointer-events: all; }
+
+    #eye-center-row {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      gap: 18px;
+      min-height: 0;
+    }
+
+    #eye-cam-section {
+      position: relative;
+      width: 320px;
+      height: 240px;
+      flex-shrink: 0;
+    }
+    #eye-cam-wrapper {
+      position: absolute; inset: 0;
+      border-radius: 14px; overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.07);
+      box-shadow: 0 0 40px rgba(0,0,0,0.5);
+      background: #000;
+    }
+    #eye-video {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover; opacity: 0.7;
+      transform: scaleX(-1);
+    }
+    #eye-overlay-canvas {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      transform: scaleX(-1);
+    }
+    #eye-status {
+      position: absolute; bottom: 10px; left: 50%;
+      transform: translateX(-50%);
+      font-family: var(--font);
+      font-size: 10px; letter-spacing: 0.1em; font-weight: 300;
+      color: rgba(255,255,255,0.5);
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(12px);
+      padding: 4px 14px; border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.07);
+      white-space: nowrap; z-index: 5;
+    }
+    #eye-live-dot {
+      position: absolute; top: 10px; right: 10px;
+      display: none; align-items: center; gap: 5px;
+      font-family: var(--font);
+      font-size: 8px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: rgba(255,255,255,0.4); z-index: 5; font-weight: 300;
+    }
+    #eye-live-dot::before {
+      content: '●'; color: #ff4040; font-size: 8px;
+      animation: pulse 1.5s infinite;
+    }
+
+    /* Object grid */
+    #object-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      flex: 1;
+      max-width: 720px;
+      height: 80vh;
+      padding: 10px;
+    }
+    .obj-card {
+      background: var(--panel-bg);
+      border: 2px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      backdrop-filter: blur(20px);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 8px;
+      cursor: default;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      min-height: 0;
+    }
+    .obj-card.gaze-hover {
+      border-color: rgba(130,255,160,0.6);
+      background: rgba(130,255,160,0.08);
+      box-shadow: 0 0 30px rgba(130,255,160,0.15);
+      transform: scale(1.03);
+    }
+    .obj-card.selected {
+      border-color: rgba(255,215,0,0.8);
+      background: rgba(255,215,0,0.12);
+      box-shadow: 0 0 40px rgba(255,215,0,0.2);
+      animation: selectPulse 0.6s ease;
+    }
+    @keyframes selectPulse {
+      0% { transform: scale(1.03); }
+      50% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+    .obj-emoji { font-size: clamp(36px, 5vw, 64px); line-height: 1; }
+    .obj-label {
+      font-family: var(--font);
+      font-size: clamp(14px, 1.8vw, 20px);
+      font-weight: 400; color: var(--text-hi);
+      letter-spacing: 0.05em; text-align: center;
+    }
+    .obj-label-zh {
+      font-family: var(--font);
+      font-size: clamp(11px, 1.2vw, 15px);
+      font-weight: 300; color: var(--text-dim);
+    }
+
+    /* Dwell progress ring */
+    .dwell-ring {
+      position: absolute; inset: 6px;
+      border-radius: 12px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .obj-card.gaze-hover .dwell-ring { opacity: 1; }
+    .dwell-ring svg {
+      position: absolute; inset: -4px;
+      width: calc(100% + 8px); height: calc(100% + 8px);
+    }
+    .dwell-ring-path {
+      fill: none;
+      stroke: rgba(130,255,160,0.8);
+      stroke-width: 3;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.1s linear;
+    }
+
+    /* Gaze cursor */
+    #gaze-cursor {
+      position: fixed;
+      width: 28px; height: 28px;
+      border: 2px solid rgba(130,255,160,0.7);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 100;
+      box-shadow: 0 0 15px rgba(130,255,160,0.3), inset 0 0 8px rgba(130,255,160,0.15);
+      display: none;
+      transition: width 0.2s, height 0.2s;
+    }
+    #gaze-cursor::after {
+      content: '';
+      position: absolute; top: 50%; left: 50%;
+      width: 4px; height: 4px;
+      background: rgba(130,255,160,0.9);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+    #gaze-cursor.active { display: block; }
+
+    /* Selection banner */
+    #selection-banner {
+      position: fixed;
+      top: 30px; left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: rgba(14,14,24,0.95);
+      border: 1px solid rgba(255,215,0,0.4);
+      border-radius: 14px;
+      padding: 16px 32px;
+      display: flex; align-items: center; gap: 14px;
+      z-index: 200;
+      backdrop-filter: blur(20px);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+    #selection-banner.show { transform: translateX(-50%) translateY(0); }
+    #selection-banner .banner-emoji { font-size: 36px; }
+    #selection-banner .banner-text {
+      font-family: var(--font-display); font-size: 22px;
+      color: rgba(255,215,0,0.95);
+    }
+    #selection-banner .banner-sub {
+      font-family: var(--font); font-size: 11px;
+      color: var(--text-dim); font-weight: 300; margin-top: 2px;
+    }
+
+    /* Right info panel for eye mode */
+    #eye-right-panel {
+      display: flex; flex-direction: column; gap: 12px;
+      height: 80vh; width: 180px; min-width: 180px; flex-shrink: 0;
+    }
+    #eye-info-card {
+      flex: 1;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 14px;
+      padding: 16px 14px;
+      backdrop-filter: blur(20px);
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .eye-info-title {
+      font-family: var(--font); font-size: 8px;
+      letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--text-dim); font-weight: 300;
+    }
+    .eye-info-item {
+      display: flex; align-items: center; gap: 8px;
+      font-family: var(--font); font-size: 11px;
+      color: var(--text-mid); font-weight: 300;
+    }
+    .eye-info-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: rgba(130,255,160,0.6); flex-shrink: 0;
+    }
+    #eye-history {
+      display: flex; flex-direction: column; gap: 6px;
+      margin-top: 8px; max-height: 200px; overflow-y: auto;
+    }
+    .history-item {
+      font-family: var(--font); font-size: 10px;
+      color: var(--text-dim); font-weight: 300;
+      padding: 4px 8px; background: rgba(255,255,255,0.03);
+      border-radius: 6px; display: flex; align-items: center; gap: 6px;
+    }
+    .history-item .h-emoji { font-size: 14px; }
+    .history-item .h-time { font-size: 8px; color: rgba(255,255,255,0.2); margin-left: auto; }
+
+    #eye-mode-pill {
+      background: var(--panel-bg);
+      border: 1px solid rgba(100,180,255,0.35);
+      box-shadow: 0 0 0 1px rgba(100,180,255,0.18) inset;
+      border-radius: 14px; padding: 12px 14px;
+      backdrop-filter: blur(20px);
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    #eye-mode-pill .pill-label {
+      font-family: var(--font); font-size: 8px;
+      letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--text-dim); font-weight: 300;
+    }
+    #eye-mode-pill .pill-name {
+      font-family: var(--font-display); font-size: 20px;
+      color: rgba(100,180,255,0.92);
+    }
+    #eye-mode-pill .pill-hint {
+      font-family: var(--font); font-size: 9px;
+      color: var(--text-dim); font-weight: 300;
+    }
   </style>
 </head>
 <body>
@@ -543,20 +919,31 @@
 <div id="intro-screen">
   <div class="intro-ambient"></div>
 
-    <img 
-    src="logo.png" 
+    <img
+    src="logo.png"
     alt="Auriculate"
     style="
       width: clamp(160px, 22vw, 280px);
       opacity: 0.92;
-      position: relative; 
+      position: relative;
       z-index: 100;
       mix-blend-mode: screen
     "
   />
-  
+
   <h1 class="intro-title">In the capital lived a master of <em>vocal mimicry</em>.</h1>
-  <button id="start-btn" onclick="handleStart()">Start</button>
+  <div class="mode-selector">
+    <button class="mode-btn" onclick="handleStart('hand')">
+      <div class="mode-icon">🤚</div>
+      <div class="mode-label">Hand Mode</div>
+      <div class="mode-desc">Gesture-powered soundscapes</div>
+    </button>
+    <button class="mode-btn" onclick="handleStart('eye')">
+      <div class="mode-icon">👁️</div>
+      <div class="mode-label">Eye Tracking</div>
+      <div class="mode-desc">Gaze-to-communicate for stroke patients</div>
+    </button>
+  </div>
 </div>
 
 <!-- ══════════ MAIN APP ══════════ -->
@@ -592,7 +979,6 @@
           <span id="legend-layer-label">Gestures · Ambience</span>
         </div>
         <div id="legend">
-          <!-- AMBIENCE gestures -->
           <div id="legend-ambience">
             <div class="g-row"><div class="g-emoji">☝️</div><div class="g-info"><div class="g-name">Wind</div><div class="g-sub">Index</div></div></div>
             <div class="g-row"><div class="g-emoji">✌️</div><div class="g-info"><div class="g-name">Rain</div><div class="g-sub">Peace</div></div></div>
@@ -600,7 +986,6 @@
             <div class="g-row"><div class="g-emoji">🤙</div><div class="g-info"><div class="g-name">Birds</div><div class="g-sub">Pinky</div></div></div>
             <div class="g-row"><div class="g-emoji">✊</div><div class="g-info"><div class="g-name">Silence</div><div class="g-sub">Fist</div></div></div>
           </div>
-          <!-- SFX gestures (hidden by default) -->
           <div id="legend-sfx" style="display:none">
             <div class="g-row"><div class="g-emoji">👌</div><div class="g-info"><div class="g-name">Dog</div><div class="g-sub">OK</div></div></div>
             <div class="g-row"><div class="g-emoji">☝️</div><div class="g-info"><div class="g-name">Guzhen</div><div class="g-sub">Index</div></div></div>
@@ -630,6 +1015,98 @@
 
 </div><!-- /app -->
 
+<!-- ══════════ EYE TRACKING APP ══════════ -->
+<div id="eye-app">
+  <div id="eye-center-row">
+    <div id="eye-cam-section">
+      <div id="eye-cam-wrapper">
+        <video id="eye-video" autoplay playsinline muted></video>
+        <canvas id="eye-overlay-canvas"></canvas>
+        <div id="eye-status">Look at the camera</div>
+        <div id="eye-live-dot">Live</div>
+      </div>
+    </div>
+
+    <div id="object-grid">
+      <div class="obj-card" data-obj="water" data-label="I want water" data-label-zh="我想喝水">
+        <div class="dwell-ring"><svg viewBox="0 0 100 100"><rect class="dwell-ring-path" x="2" y="2" width="96" height="96" rx="12" stroke-dasharray="384" stroke-dashoffset="384"/></svg></div>
+        <div class="obj-emoji">💧</div><div class="obj-label">Water</div><div class="obj-label-zh">喝水</div>
+      </div>
+      <div class="obj-card" data-obj="food" data-label="I want to eat" data-label-zh="我想吃饭">
+        <div class="dwell-ring"><svg viewBox="0 0 100 100"><rect class="dwell-ring-path" x="2" y="2" width="96" height="96" rx="12" stroke-dasharray="384" stroke-dashoffset="384"/></svg></div>
+        <div class="obj-emoji">🍚</div><div class="obj-label">Food</div><div class="obj-label-zh">吃饭</div>
+      </div>
+      <div class="obj-card" data-obj="medicine" data-label="I need medicine" data-label-zh="我需要吃药">
+        <div class="dwell-ring"><svg viewBox="0 0 100 100"><rect class="dwell-ring-path" x="2" y="2" width="96" height="96" rx="12" stroke-dasharray="384" stroke-dashoffset="384"/></svg></div>
+        <div class="obj-emoji">💊</div><div class="obj-label">Medicine</div><div class="obj-label-zh">吃药</div>
+      </div>
+      <div class="obj-card" data-obj="toilet" data-label="I need the bathroom" data-label-zh="我要上厕所">
+        <div class="dwell-ring"><svg viewBox="0 0 100 100"><rect class="dwell-ring-path" x="2" y="2" width="96" height="96" rx="12" stroke-dasharray="384" stroke-dashoffset="384"/></svg></div>
+        <div class="obj-emoji">🚽</div><div class="obj-label">Bathroom</div><div class="obj-label-zh">厕所</div>
+      </div>
+      <div class="obj-card" data-obj="pain" data-label="I am in pain" data-label-zh="我很痛">
+        <div class="dwell-ring"><svg viewBox="0 0 100 100"><rect class="dwell-ring-path" x="2" y="2" width="96" height="96" rx="12" stroke-dasharray="384" stroke-dashoffset="384"/></svg></div>
+        <div class="obj-emoji">😣</div><div class="obj-label">Pain</div><div class="obj-label-zh">疼痛</div>
+      </div>
+      <div class="obj-card" data-obj="help" data-label="I need help" data-label-zh="我需要帮助">
+        <div class="dwell-ring"><svg viewBox="0 0 100 100"><rect class="dwell-ring-path" x="2" y="2" width="96" height="96" rx="12" stroke-dasharray="384" stroke-dashoffset="384"/></svg></div>
+        <div class="obj-emoji">🆘</div><div class="obj-label">Help</div><div class="obj-label-zh">帮助</div>
+      </div>
+      <div class="obj-card" data-obj="yes" data-label="Yes" data-label-zh="是的">
+        <div class="dwell-ring"><svg viewBox="0 0 100 100"><rect class="dwell-ring-path" x="2" y="2" width="96" height="96" rx="12" stroke-dasharray="384" stroke-dashoffset="384"/></svg></div>
+        <div class="obj-emoji">✅</div><div class="obj-label">Yes</div><div class="obj-label-zh">是</div>
+      </div>
+      <div class="obj-card" data-obj="no" data-label="No" data-label-zh="不是">
+        <div class="dwell-ring"><svg viewBox="0 0 100 100"><rect class="dwell-ring-path" x="2" y="2" width="96" height="96" rx="12" stroke-dasharray="384" stroke-dashoffset="384"/></svg></div>
+        <div class="obj-emoji">❌</div><div class="obj-label">No</div><div class="obj-label-zh">不</div>
+      </div>
+      <div class="obj-card" data-obj="sleep" data-label="I want to sleep" data-label-zh="我想睡觉">
+        <div class="dwell-ring"><svg viewBox="0 0 100 100"><rect class="dwell-ring-path" x="2" y="2" width="96" height="96" rx="12" stroke-dasharray="384" stroke-dashoffset="384"/></svg></div>
+        <div class="obj-emoji">😴</div><div class="obj-label">Sleep</div><div class="obj-label-zh">睡觉</div>
+      </div>
+    </div>
+
+    <div id="eye-right-panel">
+      <div id="eye-info-card">
+        <div class="eye-info-title">How to Use</div>
+        <div class="eye-info-item"><div class="eye-info-dot"></div>Look at the camera</div>
+        <div class="eye-info-item"><div class="eye-info-dot"></div>Gaze at an item</div>
+        <div class="eye-info-item"><div class="eye-info-dot"></div>Hold gaze 2 seconds</div>
+        <div class="eye-info-item"><div class="eye-info-dot"></div>Item is spoken aloud</div>
+        <div class="eye-info-title" style="margin-top:16px">Selection History</div>
+        <div id="eye-history"></div>
+      </div>
+      <div id="eye-mode-pill">
+        <div class="pill-label">MODE</div>
+        <div class="pill-name">Eye Tracking</div>
+        <div class="pill-hint">Gaze to select</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Calibration overlay -->
+<div id="calibration-overlay">
+  <div class="calib-instruction" id="calib-text">Look at the green dot and hold your gaze steady</div>
+  <div class="calib-sub" id="calib-sub">Calibration will begin shortly</div>
+  <div class="calib-progress"><div class="calib-progress-fill" id="calib-fill"></div></div>
+  <div class="calib-counter" id="calib-counter">0 / 5</div>
+</div>
+<div class="calib-dot" id="calib-dot"></div>
+<div id="calib-cam-preview"></div>
+
+<!-- Gaze cursor -->
+<div id="gaze-cursor"></div>
+
+<!-- Selection banner -->
+<div id="selection-banner">
+  <div class="banner-emoji" id="banner-emoji"></div>
+  <div>
+    <div class="banner-text" id="banner-text"></div>
+    <div class="banner-sub" id="banner-sub"></div>
+  </div>
+</div>
+
 <!-- TUTORIAL OVERLAY -->
 <div id="tutorial-overlay" onclick="handleOverlayClick(event)">
   <div class="tutorial-box">
@@ -639,41 +1116,11 @@
 
     <p class="tut-section-title">Right hand — Sound</p>
     <div class="tut-grid">
-      <div class="tut-item">
-        <div class="tut-emoji">☝️</div>
-        <div class="tut-text">
-          <div class="tut-gesture">Index up</div>
-          <div class="tut-sound">Wind howling</div>
-        </div>
-      </div>
-      <div class="tut-item">
-        <div class="tut-emoji">✌️</div>
-        <div class="tut-text">
-          <div class="tut-gesture">Peace</div>
-          <div class="tut-sound">Rain falling</div>
-        </div>
-      </div>
-      <div class="tut-item">
-        <div class="tut-emoji">🤟</div>
-        <div class="tut-text">
-          <div class="tut-gesture">Three fingers</div>
-          <div class="tut-sound">Thunderstorm</div>
-        </div>
-      </div>
-      <div class="tut-item">
-        <div class="tut-emoji">🤙</div>
-        <div class="tut-text">
-          <div class="tut-gesture">Pinky out</div>
-          <div class="tut-sound">Birds singing</div>
-        </div>
-      </div>
-      <div class="tut-item">
-        <div class="tut-emoji">✊</div>
-        <div class="tut-text">
-          <div class="tut-gesture">Fist</div>
-          <div class="tut-sound">Silence</div>
-        </div>
-      </div>
+      <div class="tut-item"><div class="tut-emoji">☝️</div><div class="tut-text"><div class="tut-gesture">Index up</div><div class="tut-sound">Wind howling</div></div></div>
+      <div class="tut-item"><div class="tut-emoji">✌️</div><div class="tut-text"><div class="tut-gesture">Peace</div><div class="tut-sound">Rain falling</div></div></div>
+      <div class="tut-item"><div class="tut-emoji">🤟</div><div class="tut-text"><div class="tut-gesture">Three fingers</div><div class="tut-sound">Thunderstorm</div></div></div>
+      <div class="tut-item"><div class="tut-emoji">🤙</div><div class="tut-text"><div class="tut-gesture">Pinky out</div><div class="tut-sound">Birds singing</div></div></div>
+      <div class="tut-item"><div class="tut-emoji">✊</div><div class="tut-text"><div class="tut-gesture">Fist</div><div class="tut-sound">Silence</div></div></div>
     </div>
 
     <div class="tut-divider"></div>
@@ -694,13 +1141,13 @@
 
 <!-- Three.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script type="module">
-import { HandLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
+import { HandLandmarker, FaceLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
 
 // ─────────────────────────────
 //  STATE
 // ─────────────────────────────
+let appMode = "hand"; // "hand" or "eye"
 let scene = "forest", isMirrored = true, started = false;
 let gesture = { x:0, y:0, velocity:0 }, lastPos = { x:0, y:0 };
 
@@ -735,18 +1182,25 @@ const STABLE_FRAMES = 3;
 // ─────────────────────────────
 //  INTRO / TUTORIAL
 // ─────────────────────────────
-window.handleStart = async function() {
+window.handleStart = async function(mode) {
+  appMode = mode || "hand";
   document.getElementById("intro-screen").classList.add("fade-out");
   const loader = document.getElementById("loader");
   loader.style.display = "flex"; loader.style.opacity = "1";
-  try { await main(); } catch(err) {
+  try {
+    if (appMode === "hand") {
+      await main();
+      loader.style.opacity = "0";
+      setTimeout(() => {
+        loader.style.display = "none";
+        document.getElementById("app").classList.add("visible");
+      }, 700);
+    } else {
+      await mainEyeTracking();
+    }
+  } catch(err) {
     document.getElementById("loader-msg").textContent = "Error: " + err.message; return;
   }
-  loader.style.opacity = "0";
-  setTimeout(() => {
-    loader.style.display = "none";
-    document.getElementById("app").classList.add("visible");
-  }, 700);
 };
 
 window.toggleTutorial = function(show) {
@@ -821,7 +1275,6 @@ function tickVolume() {
   document.getElementById("vol-fill").style.height = pct + "%";
   document.getElementById("vol-pct").textContent = pct + "%";
 
-  // Lock visual feedback
   const fill = document.getElementById("vol-fill");
   const lockTag = document.getElementById("vol-lock-tag");
   if (isVolumeLocked) {
@@ -839,7 +1292,7 @@ function computeVolumeFromWristY(wristY) {
 }
 
 // ─────────────────────────────
-//  THREE.JS  (preserved from friend's design)
+//  THREE.JS
 // ─────────────────────────────
 const threeCanvas = document.getElementById("three-canvas");
 const renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, antialias: true, alpha: true });
@@ -932,7 +1385,7 @@ function updateLayerUI() {
 }
 
 // ─────────────────────────────
-//  MEDIAPIPE
+//  MEDIAPIPE HAND MODE
 // ─────────────────────────────
 const video = document.getElementById("video");
 const ovCanvas = document.getElementById("overlay-canvas");
@@ -973,7 +1426,6 @@ function classifyGesture(lm) {
   const ring = isFingerExtended(lm, 16, 14);
   const pinky = isFingerExtended(lm, 20, 18);
 
-  // OK gesture
   const thumbTip = lm[4], indexTip = lm[8];
   const thumbIndexDist = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
   if (thumbIndexDist < 0.05 && mid && ring && pinky) return "ok";
@@ -1006,8 +1458,7 @@ function assignHands(allLm) {
   for (const hand of allLm) {
     const wx = hand[0].x;
     const onRight = isMirrored ? wx < 0.5 : wx > 0.5;
-    if (onRight) soundHand = hand;
-    else volumeHand = hand;
+    if (onRight) soundHand = hand; else volumeHand = hand;
   }
   return { soundHand, volumeHand };
 }
@@ -1016,55 +1467,36 @@ function checkLayerSwitch(soundHand, volumeHand) {
   if (!soundHand || !volumeHand) return;
   const now = performance.now();
   if (now - lastLayerSwitchTime < 1500) return;
-
   const dirA = thumbDirection(soundHand);
   const dirB = thumbDirection(volumeHand);
-
   if (dirA === "up" && dirB === "up" && currentLayer === "ambience") {
-    currentLayer = "sfx";
-    lastLayerSwitchTime = now;
-    lastTriggeredSFX = null;
-    updateLayerUI();
+    currentLayer = "sfx"; lastLayerSwitchTime = now; lastTriggeredSFX = null; updateLayerUI();
   } else if (dirA === "down" && dirB === "down" && currentLayer === "sfx") {
-    currentLayer = "ambience";
-    lastLayerSwitchTime = now;
-    lastTriggeredSFX = null;
-    updateLayerUI();
+    currentLayer = "ambience"; lastLayerSwitchTime = now; lastTriggeredSFX = null; updateLayerUI();
   }
 }
 
 function getStableGesture(currentGesture) {
-  if (currentGesture === lastSoundGesture) {
-    soundGestureFrameCount++;
-  } else {
-    lastSoundGesture = currentGesture;
-    soundGestureFrameCount = 1;
-  }
+  if (currentGesture === lastSoundGesture) { soundGestureFrameCount++; }
+  else { lastSoundGesture = currentGesture; soundGestureFrameCount = 1; }
   return soundGestureFrameCount >= STABLE_FRAMES ? currentGesture : null;
 }
 
 function getAmbienceForGesture(g) {
-  if (g === "index_up") return windSound;
-  if (g === "peace") return rainSound;
-  if (g === "three") return thunderSound;
-  if (g === "pinky") return birdSound;
-  return null;
+  if (g === "index_up") return windSound; if (g === "peace") return rainSound;
+  if (g === "three") return thunderSound; if (g === "pinky") return birdSound; return null;
 }
 
 function getAmbienceLabel(g) {
-  if (g === "index_up") return "Wind howling";
-  if (g === "peace") return "Rain falling";
-  if (g === "three") return "Thunderstorm";
-  if (g === "pinky") return "Birds singing";
-  return "(hold still)";
+  if (g === "index_up") return "Wind howling"; if (g === "peace") return "Rain falling";
+  if (g === "three") return "Thunderstorm"; if (g === "pinky") return "Birds singing"; return "(hold still)";
 }
 
 window.addEventListener("keydown", e => {
   if (e.key === "m" || e.key === "M") {
     isMirrored = !isMirrored;
     const t = isMirrored ? "scaleX(-1)" : "scaleX(1)";
-    video.style.transform = t;
-    ovCanvas.style.transform = t;
+    video.style.transform = t; ovCanvas.style.transform = t;
   }
 });
 
@@ -1075,155 +1507,367 @@ function detectLoop() {
   const lms = results?.landmarks ?? [];
 
   let soundHand = null, volumeHand = null;
-
   if (lms.length > 0) {
-    if (!started) {
-      started = true;
-      const liveDot = document.getElementById("live-dot");
-      if (liveDot) liveDot.style.display = "flex";
-      setupAudio();
-    }
-    const assigned = assignHands(lms);
-    soundHand = assigned.soundHand;
-    volumeHand = assigned.volumeHand;
+    if (!started) { started = true; document.getElementById("live-dot").style.display = "flex"; setupAudio(); }
+    const assigned = assignHands(lms); soundHand = assigned.soundHand; volumeHand = assigned.volumeHand;
   }
 
-  // Layer switch (both hands thumbs up/down)
   checkLayerSwitch(soundHand, volumeHand);
 
-  // Volume hand
   if (volumeHand) {
     drawHandDots(volumeHand, "#FFD700");
-    if (!isVolumeLocked) {
-      const wristY = volumeHand[0].y;
-      targetVolume = computeVolumeFromWristY(wristY);
-    }
+    if (!isVolumeLocked) { targetVolume = computeVolumeFromWristY(volumeHand[0].y); }
   }
 
-  // Sound hand
   if (soundHand) {
-    const handColor = currentLayer === "ambience" ? "#00FF88" : "#FF6B9D";
-    drawHandDots(soundHand, handColor);
-
-    // Update gesture for 3D effects
+    drawHandDots(soundHand, currentLayer === "ambience" ? "#00FF88" : "#FF6B9D");
     const wrist = soundHand[0];
     const nx = wrist.x*2 - 1, ny = -(wrist.y*2 - 1);
     const dx = nx - lastPos.x, dy = ny - lastPos.y;
-    gesture = { x: nx, y: ny, velocity: Math.sqrt(dx*dx + dy*dy) * 1000 };
-    lastPos = { x: nx, y: ny };
-
+    gesture = { x: nx, y: ny, velocity: Math.sqrt(dx*dx + dy*dy) * 1000 }; lastPos = { x: nx, y: ny };
     const rawGesture = classifyGesture(soundHand);
     const stableGesture = getStableGesture(rawGesture);
     let statusText = "(hold gesture steady)";
 
     if (currentLayer === "ambience") {
       const targetSound = getAmbienceForGesture(stableGesture);
-
-      // Showing a valid sound gesture unlocks volume
-      if (isVolumeLocked && targetSound) {
-        isVolumeLocked = false;
-        lockedGesture = null;
-      }
-
-      if (targetSound) {
-        activeSoundGesture = stableGesture;
-        statusText = getAmbienceLabel(stableGesture);
-        playAmbience(targetSound);
-      } else if (stableGesture === "fist") {
-        statusText = "Silence";
-        stopAmbience();
-        isVolumeLocked = false;
-        lockedGesture = null;
-        activeSoundGesture = null;
-      }
-
+      if (isVolumeLocked && targetSound) { isVolumeLocked = false; lockedGesture = null; }
+      if (targetSound) { activeSoundGesture = stableGesture; statusText = getAmbienceLabel(stableGesture); playAmbience(targetSound); }
+      else if (stableGesture === "fist") { statusText = "Silence"; stopAmbience(); isVolumeLocked = false; lockedGesture = null; activeSoundGesture = null; }
       if (isVolumeLocked) statusText += " · Volume locked";
     } else {
-      // SFX layer: press-to-trigger mode
       if (isVolumeLocked) { isVolumeLocked = false; lockedGesture = null; }
-      const sfxMap = {
-        "ok":       { sound: dogSound,       label: "Dog barks" },
-        "index_up": { sound: guzhenSound,    label: "Guzhen" },
-        "peace":    { sound: footstepsSound, label: "Footsteps" },
-        "three":    { sound: doorSound,      label: "Door knock" }
-      };
-
-      if (stableGesture === "fist") {
-        statusText = "SFX silenced";
-        stopAllSFX();
-        lastTriggeredSFX = "fist";
-      } else if (sfxMap[stableGesture]) {
-        if (lastTriggeredSFX !== stableGesture) {
-          playSFX(sfxMap[stableGesture].sound);
-          lastTriggeredSFX = stableGesture;
-        }
+      const sfxMap = { "ok": { sound: dogSound, label: "Dog barks" }, "index_up": { sound: guzhenSound, label: "Guzhen" },
+        "peace": { sound: footstepsSound, label: "Footsteps" }, "three": { sound: doorSound, label: "Door knock" } };
+      if (stableGesture === "fist") { statusText = "SFX silenced"; stopAllSFX(); lastTriggeredSFX = "fist"; }
+      else if (sfxMap[stableGesture]) {
+        if (lastTriggeredSFX !== stableGesture) { playSFX(sfxMap[stableGesture].sound); lastTriggeredSFX = stableGesture; }
         statusText = sfxMap[stableGesture].label;
-      } else {
-        lastTriggeredSFX = null;
-        statusText = "(make a gesture)";
-      }
+      } else { lastTriggeredSFX = null; statusText = "(make a gesture)"; }
     }
-
     statusEl.textContent = statusText;
-  } else if (
-    currentLayer === "ambience" &&
-    activeSoundGesture &&
-    currentAmbience &&
-    !isVolumeLocked
-  ) {
-    // Right hand left frame while ambience playing → lock volume
-    isVolumeLocked = true;
-    lockedGesture = activeSoundGesture;
-    statusEl.textContent = `${getAmbienceLabel(lockedGesture)} · Volume locked`;
-    gesture = { x:0, y:0, velocity:0 };
+  } else if (currentLayer === "ambience" && activeSoundGesture && currentAmbience && !isVolumeLocked) {
+    isVolumeLocked = true; lockedGesture = activeSoundGesture;
+    statusEl.textContent = `${getAmbienceLabel(lockedGesture)} · Volume locked`; gesture = { x:0, y:0, velocity:0 };
   } else if (lms.length === 0) {
     statusEl.textContent = "Show your hands";
-    if (!isVolumeLocked) {
-      stopAmbience();
-      stopAllSFX();
-      activeSoundGesture = null;
-    }
+    if (!isVolumeLocked) { stopAmbience(); stopAllSFX(); activeSoundGesture = null; }
     gesture = { x:0, y:0, velocity:0 };
   } else {
-    statusEl.textContent = isVolumeLocked
-      ? "Volume locked · show same gesture to unlock"
-      : "Right hand → sound";
+    statusEl.textContent = isVolumeLocked ? "Volume locked · show same gesture to unlock" : "Right hand → sound";
     gesture = { x:0, y:0, velocity:0 };
   }
 
-  if (!soundHand && !isVolumeLocked) {
-    activeSoundGesture = null;
-  }
-
+  if (!soundHand && !isVolumeLocked) { activeSoundGesture = null; }
   requestAnimationFrame(detectLoop);
 }
 
 async function main() {
   document.getElementById("loader-msg").textContent = "Loading hand tracker…";
-  const vision = await FilesetResolver.forVisionTasks(
-    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
-  );
+  const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
   handLandmarker = await HandLandmarker.createFromOptions(vision, {
-    baseOptions: {
-      modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task"
-    },
-    runningMode: "VIDEO",
-    numHands: 2
+    baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task" },
+    runningMode: "VIDEO", numHands: 2
   });
   document.getElementById("loader-msg").textContent = "Requesting camera…";
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video: { width: 640, height: 480 }, audio: false
-  });
+  const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false });
   video.srcObject = stream;
   await new Promise(r => { video.onloadedmetadata = r; });
-  ovCanvas.width = video.videoWidth || 640;
-  ovCanvas.height = video.videoHeight || 480;
-  // Apply mirror
+  ovCanvas.width = video.videoWidth || 640; ovCanvas.height = video.videoHeight || 480;
   const t = isMirrored ? "scaleX(-1)" : "scaleX(1)";
-  video.style.transform = t;
-  ovCanvas.style.transform = t;
-  updateLayerUI();
-  detectLoop();
+  video.style.transform = t; ovCanvas.style.transform = t;
+  updateLayerUI(); detectLoop();
+}
+
+// ═══════════════════════════════════════
+//  EYE TRACKING MODE (with calibration)
+// ═══════════════════════════════════════
+const eyeVideo = document.getElementById("eye-video");
+const eyeCanvas = document.getElementById("eye-overlay-canvas");
+const eyeCtx = eyeCanvas ? eyeCanvas.getContext("2d") : null;
+const eyeStatusEl = document.getElementById("eye-status");
+const gazeCursor = document.getElementById("gaze-cursor");
+let faceLandmarker;
+
+let smoothGazeX = 0.5, smoothGazeY = 0.5;
+const GAZE_SMOOTH = 0.3;
+
+const DWELL_TIME = 1800;
+let dwellTarget = null, dwellStartTime = 0, lastSelectedTime = 0;
+const SELECTION_COOLDOWN = 1200;
+
+// ── CALIBRATION ──
+let isCalibrated = false;
+const CALIB_POINTS = [
+  { sx: 0.5, sy: 0.5 },
+  { sx: 0.15, sy: 0.15 }, { sx: 0.85, sy: 0.15 },
+  { sx: 0.15, sy: 0.85 }, { sx: 0.85, sy: 0.85 },
+];
+let calibSamples = [];
+let mapAx = 1, mapBx = 0, mapAy = 1, mapBy = 0;
+
+function getRawFeatures(landmarks) {
+  const noseTip = landmarks[1], forehead = landmarks[10], chin = landmarks[152];
+  const lCheek = landmarks[234], rCheek = landmarks[454];
+  const faceW = Math.abs(rCheek.x - lCheek.x);
+  const faceH = Math.abs(chin.y - forehead.y);
+  let headX = faceW > 0.001 ? (noseTip.x - lCheek.x) / faceW : 0.5;
+  let headY = faceH > 0.001 ? (noseTip.y - forehead.y) / faceH : 0.5;
+
+  let irisX = 0.5, irisY = 0.5;
+  let isBlinking = false;
+
+  if (landmarks.length > 477) {
+    const li = landmarks[468], ri = landmarks[473];
+    const lo = landmarks[33], lin = landmarks[133];
+    const ro = landmarks[362], rin = landmarks[263];
+    const lt = landmarks[159], lb = landmarks[145];
+    const rt = landmarks[386], rb = landmarks[374];
+    const lw = Math.abs(lin.x - lo.x), rw = Math.abs(rin.x - ro.x);
+    const lh = Math.abs(lb.y - lt.y), rh = Math.abs(rb.y - rt.y);
+
+    // Blink detection: eye aspect ratio
+    const leftEAR = lw > 0.001 ? lh / lw : 0;
+    const rightEAR = rw > 0.001 ? rh / rw : 0;
+    if ((leftEAR + rightEAR) / 2 < 0.12) {
+      isBlinking = true;
+    } else {
+      irisX = ((lw > 0.001 ? (li.x - lo.x) / lw : 0.5) + (rw > 0.001 ? (ri.x - ro.x) / rw : 0.5)) / 2;
+      irisY = ((lh > 0.001 ? (li.y - lt.y) / lh : 0.5) + (rh > 0.001 ? (ri.y - rt.y) / rh : 0.5)) / 2;
+    }
+  }
+
+  if (isBlinking) return null;
+
+  return { rawX: headX * 0.7 + irisX * 0.3, rawY: headY * 0.7 + irisY * 0.3 };
+}
+
+function computeCalibrationMap() {
+  const n = calibSamples.length;
+  if (n < 3) return;
+  let sumRx = 0, sumSx = 0, sumRxRx = 0, sumRxSx = 0;
+  let sumRy = 0, sumSy = 0, sumRyRy = 0, sumRySy = 0;
+  for (const s of calibSamples) {
+    sumRx += s.rawX; sumSx += s.sx; sumRxRx += s.rawX * s.rawX; sumRxSx += s.rawX * s.sx;
+    sumRy += s.rawY; sumSy += s.sy; sumRyRy += s.rawY * s.rawY; sumRySy += s.rawY * s.sy;
+  }
+  const detX = n * sumRxRx - sumRx * sumRx;
+  const detY = n * sumRyRy - sumRy * sumRy;
+  if (Math.abs(detX) > 1e-10) { mapAx = (n * sumRxSx - sumRx * sumSx) / detX; mapBx = (sumSx - mapAx * sumRx) / n; }
+  if (Math.abs(detY) > 1e-10) { mapAy = (n * sumRySy - sumRy * sumSy) / detY; mapBy = (sumSy - mapAy * sumRy) / n; }
+  isCalibrated = true;
+}
+
+function mapGazeToScreen(rawX, rawY) {
+  let sx = rawX * mapAx + mapBx;
+  let sy = rawY * mapAy + mapBy;
+  return { x: Math.max(0, Math.min(1, sx)), y: Math.max(0, Math.min(1, sy)) };
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function runCalibration() {
+  const overlay = document.getElementById("calibration-overlay");
+  const dot = document.getElementById("calib-dot");
+  const calibText = document.getElementById("calib-text");
+  const calibSub = document.getElementById("calib-sub");
+  const calibFill = document.getElementById("calib-fill");
+  const calibCounter = document.getElementById("calib-counter");
+
+  overlay.classList.add("active");
+  calibSamples = [];
+
+  const preview = document.getElementById("calib-cam-preview");
+  const previewVideo = document.createElement("video");
+  previewVideo.srcObject = eyeVideo.srcObject;
+  previewVideo.autoplay = true; previewVideo.muted = true; previewVideo.playsInline = true;
+  preview.innerHTML = ""; preview.appendChild(previewVideo);
+  preview.classList.add("active");
+
+  calibText.textContent = "Look at each green dot and hold your gaze";
+  calibSub.textContent = "Keep your head still, move only your eyes + slight head turns";
+  await sleep(2000);
+
+  for (let i = 0; i < CALIB_POINTS.length; i++) {
+    const pt = CALIB_POINTS[i];
+    const px = pt.sx * window.innerWidth, py = pt.sy * window.innerHeight;
+    calibCounter.textContent = `${i + 1} / ${CALIB_POINTS.length}`;
+    calibFill.style.width = `${(i / CALIB_POINTS.length) * 100}%`;
+    dot.style.left = px + "px"; dot.style.top = py + "px"; dot.style.display = "block";
+
+    await sleep(600);
+    const samples = [];
+    const collectStart = performance.now();
+    while (performance.now() - collectStart < 1200) {
+      const results = faceLandmarker.detectForVideo(eyeVideo, performance.now());
+      const faces = results?.faceLandmarks ?? [];
+      if (faces.length > 0) { const feat = getRawFeatures(faces[0]); if (feat) samples.push(feat); }
+      await sleep(50);
+    }
+
+    if (samples.length > 0) {
+      const avgRawX = samples.reduce((s, v) => s + v.rawX, 0) / samples.length;
+      const avgRawY = samples.reduce((s, v) => s + v.rawY, 0) / samples.length;
+      calibSamples.push({ sx: pt.sx, sy: pt.sy, rawX: avgRawX, rawY: avgRawY });
+    }
+    dot.style.display = "none"; await sleep(300);
+  }
+
+  computeCalibrationMap();
+  calibFill.style.width = "100%";
+  calibText.textContent = "Calibration complete!";
+  calibSub.textContent = "Starting eye tracking...";
+  calibCounter.textContent = ""; dot.style.display = "none";
+  await sleep(1000);
+  overlay.classList.remove("active"); preview.classList.remove("active");
+}
+
+function drawFaceMesh(landmarks) {
+  if (!eyeCtx) return;
+  const W = eyeCanvas.width, H = eyeCanvas.height;
+  const irisIndices = [468, 469, 470, 471, 472, 473, 474, 475, 476, 477];
+  for (const i of irisIndices) {
+    if (i >= landmarks.length) continue;
+    eyeCtx.beginPath(); eyeCtx.arc(landmarks[i].x * W, landmarks[i].y * H, 3, 0, Math.PI * 2);
+    eyeCtx.fillStyle = "rgba(100,180,255,0.9)"; eyeCtx.fill();
+  }
+  const leftEye = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246, 33];
+  const rightEye = [362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398, 362];
+  for (const contour of [leftEye, rightEye]) {
+    eyeCtx.beginPath(); eyeCtx.moveTo(landmarks[contour[0]].x * W, landmarks[contour[0]].y * H);
+    for (let j = 1; j < contour.length; j++) eyeCtx.lineTo(landmarks[contour[j]].x * W, landmarks[contour[j]].y * H);
+    eyeCtx.strokeStyle = "rgba(100,180,255,0.4)"; eyeCtx.lineWidth = 1; eyeCtx.stroke();
+  }
+}
+
+function findGazedCard(screenX, screenY) {
+  for (const card of document.querySelectorAll(".obj-card")) {
+    const r = card.getBoundingClientRect();
+    if (screenX >= r.left && screenX <= r.right && screenY >= r.top && screenY <= r.bottom) return card;
+  }
+  return null;
+}
+
+function updateDwellProgress(card, progress) {
+  const path = card.querySelector(".dwell-ring-path");
+  if (path) path.style.strokeDashoffset = 384 * (1 - progress);
+}
+
+function resetAllDwellProgress() {
+  document.querySelectorAll(".dwell-ring-path").forEach(p => { p.style.strokeDashoffset = "384"; });
+}
+
+function selectObject(card) {
+  const label = card.dataset.label, labelZh = card.dataset.labelZh;
+  const emoji = card.querySelector(".obj-emoji").textContent;
+  card.classList.add("selected"); setTimeout(() => card.classList.remove("selected"), 1200);
+  const banner = document.getElementById("selection-banner");
+  document.getElementById("banner-emoji").textContent = emoji;
+  document.getElementById("banner-text").textContent = label;
+  document.getElementById("banner-sub").textContent = labelZh;
+  banner.classList.add("show"); setTimeout(() => banner.classList.remove("show"), 3000);
+  speakText(label); addToHistory(emoji, label);
+  if (eyeStatusEl) eyeStatusEl.textContent = `Selected: ${label}`;
+}
+
+function speakText(text) {
+  if (!("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 0.9; u.pitch = 1; u.volume = 1;
+  const voices = window.speechSynthesis.getVoices();
+  const pref = voices.find(v => v.lang.startsWith("en") && v.name.includes("Google")) || voices.find(v => v.lang.startsWith("en"));
+  if (pref) u.voice = pref;
+  window.speechSynthesis.speak(u);
+}
+
+function addToHistory(emoji, label) {
+  const history = document.getElementById("eye-history");
+  if (!history) return;
+  const now = new Date();
+  const ts = [now.getHours(), now.getMinutes(), now.getSeconds()].map(v => String(v).padStart(2, "0")).join(":");
+  const item = document.createElement("div"); item.className = "history-item";
+  item.innerHTML = `<span class="h-emoji">${emoji}</span> ${label} <span class="h-time">${ts}</span>`;
+  history.insertBefore(item, history.firstChild);
+  while (history.children.length > 10) history.removeChild(history.lastChild);
+}
+
+function eyeDetectLoop() {
+  if (!faceLandmarker || !isCalibrated) { requestAnimationFrame(eyeDetectLoop); return; }
+  if (eyeCtx) eyeCtx.clearRect(0, 0, eyeCanvas.width, eyeCanvas.height);
+
+  const results = faceLandmarker.detectForVideo(eyeVideo, performance.now());
+  const faces = results?.faceLandmarks ?? [];
+
+  if (faces.length > 0) {
+    const landmarks = faces[0];
+    const liveDot = document.getElementById("eye-live-dot");
+    if (liveDot) liveDot.style.display = "flex";
+    drawFaceMesh(landmarks);
+
+    const features = getRawFeatures(landmarks);
+    if (!features) { requestAnimationFrame(eyeDetectLoop); return; } // blink — skip
+
+    const screenPos = mapGazeToScreen(features.rawX, features.rawY);
+    smoothGazeX = smoothGazeX * GAZE_SMOOTH + screenPos.x * (1 - GAZE_SMOOTH);
+    smoothGazeY = smoothGazeY * GAZE_SMOOTH + screenPos.y * (1 - GAZE_SMOOTH);
+
+    const cursorX = smoothGazeX * window.innerWidth, cursorY = smoothGazeY * window.innerHeight;
+    if (gazeCursor) { gazeCursor.style.left = cursorX + "px"; gazeCursor.style.top = cursorY + "px"; }
+
+    const now = performance.now();
+    const gazedCard = findGazedCard(cursorX, cursorY);
+    document.querySelectorAll(".obj-card").forEach(c => c.classList.remove("gaze-hover"));
+
+    if (gazedCard && (now - lastSelectedTime) > SELECTION_COOLDOWN) {
+      gazedCard.classList.add("gaze-hover");
+      if (dwellTarget === gazedCard) {
+        const progress = Math.min(1, (now - dwellStartTime) / DWELL_TIME);
+        updateDwellProgress(gazedCard, progress);
+        if (progress >= 1) { selectObject(gazedCard); dwellTarget = null; dwellStartTime = 0; lastSelectedTime = now; resetAllDwellProgress(); }
+      } else { resetAllDwellProgress(); dwellTarget = gazedCard; dwellStartTime = now; }
+    } else if (!gazedCard) { dwellTarget = null; dwellStartTime = 0; resetAllDwellProgress(); }
+
+    if (eyeStatusEl && !dwellTarget) eyeStatusEl.textContent = "Tracking your gaze";
+    else if (eyeStatusEl && dwellTarget) {
+      const remaining = Math.max(0, DWELL_TIME - (now - dwellStartTime));
+      eyeStatusEl.textContent = `Hold gaze... ${(remaining / 1000).toFixed(1)}s`;
+    }
+  } else {
+    if (eyeStatusEl) eyeStatusEl.textContent = "Look at the camera";
+    dwellTarget = null; dwellStartTime = 0; resetAllDwellProgress();
+    document.querySelectorAll(".obj-card").forEach(c => c.classList.remove("gaze-hover"));
+  }
+
+  requestAnimationFrame(eyeDetectLoop);
+}
+
+async function mainEyeTracking() {
+  document.getElementById("loader-msg").textContent = "Loading face tracker…";
+  const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
+  faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
+    baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task" },
+    runningMode: "VIDEO", numFaces: 1, outputFaceBlendshapes: false, outputFacialTransformationMatrixes: false
+  });
+
+  document.getElementById("loader-msg").textContent = "Requesting camera…";
+  const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false });
+  eyeVideo.srcObject = stream;
+  await new Promise(r => { eyeVideo.onloadedmetadata = r; });
+  if (eyeCanvas) { eyeCanvas.width = eyeVideo.videoWidth || 640; eyeCanvas.height = eyeVideo.videoHeight || 480; }
+  if ("speechSynthesis" in window) window.speechSynthesis.getVoices();
+
+  eyeDetectLoop();
+
+  document.getElementById("loader").style.opacity = "0";
+  setTimeout(async () => {
+    document.getElementById("loader").style.display = "none";
+    document.getElementById("eye-app").classList.add("visible");
+    document.getElementById("gaze-cursor").classList.add("active");
+    await runCalibration();
+  }, 700);
+
+  return "calibrated";
 }
 </script>
 </body>
